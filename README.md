@@ -94,7 +94,7 @@ mkdir data
 
 **Step 2 — Copy the CSV files into `data/`**
 
-Place all raw EHR CSV files directly inside `data/` (no subdirectories). The dashboard expects these 15 files:
+Place all raw EHR CSV files directly inside `data/` (no subdirectories). The dashboard expects these 17 files:
 
 ```
 data/
@@ -112,7 +112,9 @@ data/
 ├── supplies.csv
 ├── payer_transitions.csv
 ├── claims.csv
-└── claims_transactions.csv
+├── claims_transactions.csv
+├── organizations.csv
+└── providers.csv
 ```
 
 Your repo root should then look like:
@@ -122,7 +124,7 @@ mlasgn2public/
 ├── data/
 │   ├── patients.csv
 │   ├── encounters.csv
-│   └── ... (15 CSVs total)
+│   └── ... (17 CSVs total)
 ├── Team13_Assignment2_dashboard.py
 └── requirements.txt
 ```
