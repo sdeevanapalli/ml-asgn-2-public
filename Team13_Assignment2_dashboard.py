@@ -1,5 +1,6 @@
 # ── CONFIGURATION ─────────────────────────────────────────────────────────────
 DATA_DIR = "data/"
+GDRIVE_URL = "https://drive.google.com/drive/folders/1HGjj4vBzRbSFkkjmcJOu6PESguvmZcpo?usp=sharing"  # Replace with actual folder URL
 RANDOM_STATE = 42
 TEMPORAL_CUTOFF = "2020-01-01"
 TEST_SIZE = 0.2
@@ -696,10 +697,54 @@ MUTED    = FG_MUTED
 INK      = FG
 
 # ══════════════════════════════════════════════════════════════════════════════
-# PIPELINE — UNTOUCHED
+# PIPELINE
 # ══════════════════════════════════════════════════════════════════════════════
 @st.cache_data
 def run_pipeline():
+    import os
+    if not os.path.exists(DATA_DIR):
+        os.makedirs(DATA_DIR)
+    
+    # Download dataset if not present
+    if len([f for f in os.listdir(DATA_DIR) if f.endswith(".csv")]) < 15:
+        st.info("Downloading dataset from Google Drive... This may take a few minutes.")
+        import sys
+        import subprocess
+        import shutil
+        
+        # 1. Attempt to download the URL directly as a folder
+        subprocess.run([sys.executable, "-m", "gdown", "--folder", GDRIVE_URL, "-O", DATA_DIR], check=False)
+        
+        # Helper to check if any CSVs were successfully grabbed (flatteningly aware)
+        def has_csvs():
+            for _, _, f_list in os.walk(DATA_DIR):
+                if any(f.endswith(".csv") for f in f_list):
+                    return True
+            return False
+            
+        # 2. Check if we got the files. If not, fallback to assuming it's a file / zip link
+        if not has_csvs():
+            zip_path = os.path.join(DATA_DIR, "dataset.zip")
+            subprocess.run([sys.executable, "-m", "gdown", GDRIVE_URL, "-O", zip_path], check=False)
+            
+            import zipfile
+            if os.path.exists(zip_path):
+                if zipfile.is_zipfile(zip_path):
+                    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                        zip_ref.extractall(DATA_DIR)
+                os.remove(zip_path)
+                    
+        # Flatten directory structure if files were extracted into a subfolder
+        for root, dirs, files in os.walk(DATA_DIR):
+            for file in files:
+                if file.endswith(".csv") and root != os.path.abspath(DATA_DIR) and root != DATA_DIR:
+                    try:
+                        shutil.move(os.path.join(root, file), os.path.join(DATA_DIR, file))
+                    except shutil.Error:
+                        pass # File already exists
+
+        st.success("Download complete! Continuing pipeline...")
+
     patients     = pd.read_csv(DATA_DIR + "patients.csv", on_bad_lines="skip")
     encounters   = pd.read_csv(DATA_DIR + "encounters.csv", on_bad_lines="skip")
     observations = pd.read_csv(DATA_DIR + "observations.csv", on_bad_lines="skip")
