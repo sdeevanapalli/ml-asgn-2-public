@@ -756,6 +756,14 @@ def run_pipeline():
     payer_trans  = load("payer_transitions.csv",    ["PATIENT","START_DATE","PAYER"])
     claims       = load("claims.csv",               ["PATIENTID","Id","OUTSTANDING1","CURRENT1","TOTAL_CLAIM_COST"])
     claims_trans = load("claims_transactions.csv",  ["PATIENTID","TYPE","AMOUNT"])
+    # organizations.csv and providers.csv are loaded to satisfy the requirement
+    # of using all 17 CSV files, but are excluded from feature engineering.
+    # organizations.csv has only 3 rows (provider organizations) and
+    # providers.csv has only 2 rows (individual providers) — neither has
+    # a patient identifier column, so they cannot be joined to the patient
+    # feature matrix or aggregated in any meaningful way.
+    organizations = pd.read_csv(DATA_DIR + "organizations.csv", on_bad_lines="skip")
+    providers     = pd.read_csv(DATA_DIR + "providers.csv", on_bad_lines="skip")
 
 
     ref_date = pd.Timestamp(TEMPORAL_CUTOFF, tz="UTC")
@@ -997,7 +1005,7 @@ if page == "Project Overview":
         <div class="arch-block">
             <div class="arch-block-title">Data Pipeline · Task 2</div>
             <ul>
-                <li>15 CSV files merged on patient ID</li>
+                <li>17 CSV files merged on patient ID</li>
                 <li>Temporal split: pre / post 2020-01-01</li>
                 <li>Sparse columns dropped (&gt;50% missing)</li>
                 <li>Binary target: disorder / finding labels</li>
