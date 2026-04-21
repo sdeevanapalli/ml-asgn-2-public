@@ -1,10 +1,8 @@
-# ── CONFIGURATION ─────────────────────────────────────────────────────────────
 DATA_DIR = "data/"
-GDRIVE_URL = "https://drive.google.com/drive/folders/1HGjj4vBzRbSFkkjmcJOu6PESguvmZcpo?usp=sharing"  # Replace with actual folder URL
+GDRIVE_URL = "https://drive.google.com/drive/folders/1HGjj4vBzRbSFkkjmcJOu6PESguvmZcpo?usp=sharing"
 RANDOM_STATE = 42
 TEMPORAL_CUTOFF = "2020-01-01"
 TEST_SIZE = 0.2
-# ──────────────────────────────────────────────────────────────────────────────
 
 import streamlit as st
 import pandas as pd
@@ -25,9 +23,7 @@ from sklearn.metrics import (accuracy_score, precision_score, recall_score,
                               ConfusionMatrixDisplay, roc_curve, auc)
 from imblearn.over_sampling import SMOTE
 
-# ══════════════════════════════════════════════════════════════════════════════
-# UI — PAGE CONFIG
-# ══════════════════════════════════════════════════════════════════════════════
+# --- page config ---
 st.set_page_config(
     page_title="Clinical Prediction · Team 13",
     page_icon="⚕",
@@ -46,11 +42,7 @@ NAV_ITEMS = [
     ("Feature Importance",        "05"),
 ]
 
-# ══════════════════════════════════════════════════════════════════════════════
-# UI — GLOBAL CSS
-# Design: dark charcoal base, muted amber accent, Inter/system-ui type
-# No gradients, no glows, no decorative elements — clean analytics tool
-# ══════════════════════════════════════════════════════════════════════════════
+# global CSS — dark charcoal / muted amber, Inter type, no decorative elements
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
@@ -643,9 +635,7 @@ hr {
 </style>
 """, unsafe_allow_html=True)
 
-# ══════════════════════════════════════════════════════════════════════════════
-# UI — MATPLOTLIB DARK THEME (matches the dark UI)
-# ══════════════════════════════════════════════════════════════════════════════
+# matplotlib theme — matches the dark UI
 BG       = "#171a1f"
 BG_CARD  = "#1e2128"
 FG       = "#e8eaf0"
@@ -656,7 +646,7 @@ BORDER   = "#2a2e38"
 C_AMBER  = "#d4a84b"
 C_GREEN  = "#4caf82"
 C_RED    = "#e05c5c"
-C_TEAL   = "#4caf82"   # reuse green for teal slots
+C_TEAL   = "#4caf82"
 C_INDIG  = "#7a8fc4"
 
 matplotlib.rcParams.update({
@@ -691,14 +681,8 @@ matplotlib.rcParams.update({
     "legend.framealpha": 1,
 })
 
-# Shorthand for inline style strings
-INK_SOFT = FG_SOFT
-MUTED    = FG_MUTED
-INK      = FG
 
-# ══════════════════════════════════════════════════════════════════════════════
-# PIPELINE
-# ══════════════════════════════════════════════════════════════════════════════
+
 @st.cache_data
 def run_pipeline():
     import os
@@ -753,29 +737,30 @@ def run_pipeline():
             return expected
 
 
-    patients     = pd.read_csv(DATA_DIR + "patients.csv", on_bad_lines="skip", usecols=get_usecols(DATA_DIR + "patients.csv", ["Id","BIRTHDATE","DEATHDATE","GENDER","RACE","ETHNICITY","MARITAL","INCOME","HEALTHCARE_COVERAGE"]), dtype=str)
-    encounters   = pd.read_csv(DATA_DIR + "encounters.csv", on_bad_lines="skip", usecols=get_usecols(DATA_DIR + "encounters.csv", ["PATIENT", "START", "Id","ENCOUNTERCLASS","BASE_ENCOUNTER_COST","TOTAL_CLAIM_COST","PAYER_COVERAGE"]), dtype=str)
-    observations = pd.read_csv(DATA_DIR + "observations.csv", on_bad_lines="skip", usecols=get_usecols(DATA_DIR + "observations.csv", ["PATIENT","DESCRIPTION","VALUE"]), dtype=str)
-    conditions   = pd.read_csv(DATA_DIR + "conditions.csv", on_bad_lines="skip", dayfirst=True, usecols=get_usecols(DATA_DIR + "conditions.csv", ["PATIENT", "START", "DESCRIPTION"]), dtype=str)
-    medications  = pd.read_csv(DATA_DIR + "medications.csv", on_bad_lines="skip", usecols=get_usecols(DATA_DIR + "medications.csv", ["PATIENT", "START", "DESCRIPTION", "BASE_COST", "DISPENSES"]), dtype=str)
-    procedures   = pd.read_csv(DATA_DIR + "procedures.csv", on_bad_lines="skip", usecols=get_usecols(DATA_DIR + "procedures.csv", ["PATIENT", "START", "DESCRIPTION", "BASE_COST"]), dtype=str)
-    immunizations= pd.read_csv(DATA_DIR + "immunizations.csv", on_bad_lines="skip", usecols=get_usecols(DATA_DIR + "immunizations.csv", ["PATIENT", "DATE", "DESCRIPTION"]), dtype=str)
-    allergies    = pd.read_csv(DATA_DIR + "allergies.csv", on_bad_lines="skip", usecols=get_usecols(DATA_DIR + "allergies.csv", ["PATIENT", "START", "TYPE", "CATEGORY"]), dtype=str)
-    careplans    = pd.read_csv(DATA_DIR + "careplans.csv", on_bad_lines="skip", usecols=get_usecols(DATA_DIR + "careplans.csv", ["PATIENT", "Id", "REASONDESCRIPTION"]), dtype=str)
-    imaging      = pd.read_csv(DATA_DIR + "imaging_studies.csv", on_bad_lines="skip", usecols=get_usecols(DATA_DIR + "imaging_studies.csv", ["PATIENT", "Id", "MODALITY_DESCRIPTION", "BODYSITE_DESCRIPTION"]), dtype=str)
-    devices      = pd.read_csv(DATA_DIR + "devices.csv", on_bad_lines="skip", usecols=get_usecols(DATA_DIR + "devices.csv", ["PATIENT", "START", "DESCRIPTION"]), dtype=str)
-    supplies     = pd.read_csv(DATA_DIR + "supplies.csv", on_bad_lines="skip", usecols=get_usecols(DATA_DIR + "supplies.csv", ["PATIENT", "DATE", "DESCRIPTION"]), dtype=str)
-    payer_trans  = pd.read_csv(DATA_DIR + "payer_transitions.csv", on_bad_lines="skip", usecols=get_usecols(DATA_DIR + "payer_transitions.csv", ["PATIENT", "START_DATE", "PAYER"]), dtype=str)
-    claims       = pd.read_csv(DATA_DIR + "claims.csv", on_bad_lines="skip", usecols=get_usecols(DATA_DIR + "claims.csv", ["PATIENTID", "Id", "OUTSTANDING1", "CURRENT1", "TOTAL_CLAIM_COST"]), dtype=str)
-    claims_trans = pd.read_csv(DATA_DIR + "claims_transactions.csv", on_bad_lines="skip", usecols=get_usecols(DATA_DIR + "claims_transactions.csv", ["PATIENTID","TYPE","AMOUNT"]), dtype=str)
+    def load(fname, cols, **kw):
+        path = DATA_DIR + fname
+        return pd.read_csv(path, on_bad_lines="skip", usecols=get_usecols(path, cols), dtype=str, **kw)
+
+    patients     = load("patients.csv",            ["Id","BIRTHDATE","DEATHDATE","GENDER","RACE","ETHNICITY","MARITAL","INCOME","HEALTHCARE_COVERAGE"])
+    encounters   = load("encounters.csv",           ["PATIENT","START","Id","ENCOUNTERCLASS","BASE_ENCOUNTER_COST","TOTAL_CLAIM_COST","PAYER_COVERAGE"])
+    observations = load("observations.csv",         ["PATIENT","DESCRIPTION","VALUE"])
+    conditions   = load("conditions.csv",           ["PATIENT","START","DESCRIPTION"], dayfirst=True)
+    medications  = load("medications.csv",          ["PATIENT","START","DESCRIPTION","BASE_COST","DISPENSES"])
+    procedures   = load("procedures.csv",           ["PATIENT","START","DESCRIPTION","BASE_COST"])
+    immunizations = load("immunizations.csv",       ["PATIENT","DATE","DESCRIPTION"])
+    allergies    = load("allergies.csv",            ["PATIENT","START","TYPE","CATEGORY"])
+    careplans    = load("careplans.csv",            ["PATIENT","Id","REASONDESCRIPTION"])
+    imaging      = load("imaging_studies.csv",      ["PATIENT","Id","MODALITY_DESCRIPTION","BODYSITE_DESCRIPTION"])
+    devices      = load("devices.csv",              ["PATIENT","START","DESCRIPTION"])
+    supplies     = load("supplies.csv",             ["PATIENT","DATE","DESCRIPTION"])
+    payer_trans  = load("payer_transitions.csv",    ["PATIENT","START_DATE","PAYER"])
+    claims       = load("claims.csv",               ["PATIENTID","Id","OUTSTANDING1","CURRENT1","TOTAL_CLAIM_COST"])
+    claims_trans = load("claims_transactions.csv",  ["PATIENTID","TYPE","AMOUNT"])
 
 
     ref_date = pd.Timestamp(TEMPORAL_CUTOFF, tz="UTC")
     
-    # ---------------------------------------------------------
-    # Safely convert strictly numeric fields to floats to avoid 
-    # Pandas C-engine chunking/warning/IndexError parsing bugs.
-    # ---------------------------------------------------------
+    # Pandas C-engine IndexError if numeric columns stay as str after dtype=str load
     for col in ["BASE_ENCOUNTER_COST", "TOTAL_CLAIM_COST", "PAYER_COVERAGE"]:
         if col in encounters.columns: encounters[col] = pd.to_numeric(encounters[col], errors="coerce")
     for col in ["BASE_COST", "DISPENSES"]:
@@ -831,8 +816,9 @@ def run_pipeline():
         ct_agg = pd.DataFrame(columns=["PATIENT"])
 
     df = pat_features.copy()
-    for fdf in [enc_agg,obs_features,med_agg,proc_agg,imm_agg,allergy_agg,care_agg,img_agg,dev_agg,sup_agg,pay_agg,claims_agg,ct_agg]:
-        if "PATIENT" in fdf.columns: df = df.merge(fdf,on="PATIENT",how="left")
+    for feat_df in [enc_agg, obs_features, med_agg, proc_agg, imm_agg, allergy_agg, care_agg, img_agg, dev_agg, sup_agg, pay_agg, claims_agg, ct_agg]:
+        if "PATIENT" in feat_df.columns:
+            df = df.merge(feat_df, on="PATIENT", how="left")
 
     conditions["START"] = pd.to_datetime(conditions["START"],dayfirst=True,errors="coerce",utc=True)
     pos_pts = set(conditions[conditions["DESCRIPTION"].str.contains(r"\(disorder\)|\(finding\)",na=False,regex=True)]["PATIENT"].unique())
@@ -851,10 +837,12 @@ def run_pipeline():
     missing_series = all_X_pre.isna().mean().sort_values(ascending=False).head(20)
 
     def preprocess(df_in):
-        X = df_in.drop(columns=["label"]); y = df_in["label"]
+        X = df_in.drop(columns=["label"])
+        y = df_in["label"]
         X = X.loc[:, X.isna().mean() < 0.5]
         for col in X.columns:
-            X[col] = X[col].fillna(X[col].median() if X[col].dtype in ["float64","int64"] else X[col].mode()[0])
+            fill = X[col].median() if X[col].dtype in ["float64", "int64"] else X[col].mode()[0]
+            X[col] = X[col].fillna(fill)
         return X, y
 
     X1,y1 = preprocess(df1); X2,y2 = preprocess(df2)
@@ -878,37 +866,45 @@ def run_pipeline():
     svm_best = GridSearchCV(SVC(kernel="rbf",class_weight="balanced",probability=True,random_state=RANDOM_STATE),{"C":[0.1,1,10]},scoring="f1",cv=5,n_jobs=-1).fit(X_tr1,y_tr1).best_estimator_
     mlp = MLPClassifier(hidden_layer_sizes=(128,64,32),activation="relu",max_iter=500,early_stopping=True,random_state=RANDOM_STATE).fit(X1s,y1s)
 
-    def evaluate(model,X,y,label,dataset):
-        p=model.predict(X); pr=model.predict_proba(X)[:,1]
-        return {"model":label,"evaluated_on":dataset,"accuracy":accuracy_score(y,p),
-                "precision":precision_score(y,p,zero_division=0),"recall":recall_score(y,p,zero_division=0),
-                "f1":f1_score(y,p,zero_division=0),"roc_auc":roc_auc_score(y,pr)}
+    def evaluate(model, X, y, name, split):
+        preds = model.predict(X)
+        proba = model.predict_proba(X)[:, 1]
+        return {
+            "model": name, "evaluated_on": split,
+            "accuracy":  accuracy_score(y, preds),
+            "precision": precision_score(y, preds, zero_division=0),
+            "recall":    recall_score(y, preds, zero_division=0),
+            "f1":        f1_score(y, preds, zero_division=0),
+            "roc_auc":   roc_auc_score(y, proba),
+        }
 
     results = []
-    for m,n in [(dt_best,"DT"),(svm_best,"SVM"),(mlp,"MLP")]:
-        results += [evaluate(m,X_te1,y_te1,n,"D1"), evaluate(m,X_te2,y_te2,n,"D2")]
+    for model, name in [(dt_best, "DT"), (svm_best, "SVM"), (mlp, "MLP")]:
+        results += [evaluate(model, X_te1, y_te1, name, "D1"), evaluate(model, X_te2, y_te2, name, "D2")]
     baseline_df = pd.DataFrame(results)
 
     mlp_cl = MLPClassifier(hidden_layer_sizes=(128,64,32),activation="relu",max_iter=1,warm_start=False,random_state=RANDOM_STATE)
     mlp_cl.fit(X1s[:10],y1s[:10])
     mlp_cl.coefs_ = mlp.coefs_; mlp_cl.intercepts_ = mlp.intercepts_
-    X2a = X2s.values if hasattr(X2s,"values") else X2s
-    y2a = y2s.values if hasattr(y2s,"values") else y2s
+    X2a = X2s.values if hasattr(X2s, "values") else X2s
+    y2a = y2s.values if hasattr(y2s, "values") else y2s
     for _ in range(50):
         idx = np.random.permutation(len(X2a))
-        for s in range(0,len(X2a),64):
-            b=idx[s:s+64]; mlp_cl.partial_fit(X2a[b],y2a[b],classes=np.array([0,1]))
+        for s in range(0, len(X2a), 64):
+            batch = idx[s:s+64]
+            mlp_cl.partial_fit(X2a[batch], y2a[batch], classes=np.array([0, 1]))
 
-    continual_df = pd.DataFrame([evaluate(mlp,X_te2,y_te2,"MLP_D1","D2"),evaluate(mlp_cl,X_te2,y_te2,"MLP_CL","D2")])
+    continual_df = pd.DataFrame([
+        evaluate(mlp,    X_te2, y_te2, "MLP_D1", "D2"),
+        evaluate(mlp_cl, X_te2, y_te2, "MLP_CL", "D2"),
+    ])
     return dict(X_train_d1=X_tr1,y_train_d1=y_tr1,y_test_d1=y_te1,X_train_d2=X_tr2,y_train_d2=y_tr2,
                 y_test_d2=y_te2,X_test_d1=X_te1,X_test_d2=X_te2,feature_names=common_cols,
                 baseline_df=baseline_df,continual_df=continual_df,dt_best=dt_best,svm_best=svm_best,
                 mlp=mlp,mlp_cl=mlp_cl,d1_size=len(df1),d2_size=len(df2),total_patients=len(df),
                 missing_series=missing_series)
 
-# ══════════════════════════════════════════════════════════════════════════════
-# UI — SIDEBAR
-# ══════════════════════════════════════════════════════════════════════════════
+# --- sidebar ---
 with st.sidebar:
     st.markdown("""
     <div class="sb-brand">
@@ -935,9 +931,6 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
-# ══════════════════════════════════════════════════════════════════════════════
-# PIPELINE LOAD
-# ══════════════════════════════════════════════════════════════════════════════
 with st.spinner("Running pipeline — first load takes ~1 min"):
     data = run_pipeline()
 
@@ -949,9 +942,7 @@ continual_df=data["continual_df"];   missing_series=data["missing_series"]
 dt_best=data["dt_best"]; svm_best=data["svm_best"]; mlp=data["mlp"]; mlp_cl=data["mlp_cl"]
 page = st.session_state.page
 
-# ══════════════════════════════════════════════════════════════════════════════
-# PAGE 1 — PROJECT OVERVIEW
-# ══════════════════════════════════════════════════════════════════════════════
+# --- page: project overview ---
 if page == "Project Overview":
 
     st.markdown("""
@@ -1081,9 +1072,7 @@ if page == "Project Overview":
     </div>
     """, unsafe_allow_html=True)
 
-# ══════════════════════════════════════════════════════════════════════════════
-# PAGE 2 — EXPLORATORY DATA ANALYSIS
-# ══════════════════════════════════════════════════════════════════════════════
+# --- page: EDA ---
 elif page == "Exploratory Data Analysis":
 
     st.markdown("""
@@ -1110,7 +1099,6 @@ elif page == "Exploratory Data Analysis":
     )
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # ── EDA sub-sections (logic untouched) ───────────────────────────────────
     if eda_section == "Class Distribution":
         fig, axes = plt.subplots(1, 2, figsize=(12, 5))
         for ax, y, title, col in [
@@ -1276,9 +1264,7 @@ elif page == "Exploratory Data Analysis":
         plt.close(fig)
         st.info("Columns above 50% missingness (red) are dropped before training — typically rare lab tests or sparse allergy panels.")
 
-# ══════════════════════════════════════════════════════════════════════════════
-# PAGE 3 — MODEL PERFORMANCE
-# ══════════════════════════════════════════════════════════════════════════════
+# --- page: model performance ---
 elif page == "Model Performance":
 
     st.markdown("""
@@ -1302,7 +1288,6 @@ elif page == "Model Performance":
         st.markdown('<span class="sec-label">Metric</span>', unsafe_allow_html=True)
         metric = st.selectbox("Metric", ["accuracy","precision","recall","f1","roc_auc"], label_visibility="collapsed")
 
-    # Logic untouched
     pivot = baseline_df.pivot(index="model", columns="evaluated_on", values=metric)
     fig, ax = plt.subplots(figsize=(9, 4.5))
     x = np.arange(len(pivot)); w = 0.36
@@ -1379,9 +1364,7 @@ elif page == "Model Performance":
         </ul>
     </div>""", unsafe_allow_html=True)
 
-# ══════════════════════════════════════════════════════════════════════════════
-# PAGE 4 — CONTINUAL LEARNING
-# ══════════════════════════════════════════════════════════════════════════════
+# --- page: continual learning ---
 elif page == "Continual Learning":
 
     st.markdown("""
@@ -1392,12 +1375,11 @@ elif page == "Continual Learning":
     </div>
     """, unsafe_allow_html=True)
 
-    # Logic untouched
     r0 = continual_df[continual_df.model=="MLP_D1"].iloc[0]
     r1 = continual_df[continual_df.model=="MLP_CL"].iloc[0]
     f1_dir = "dropped" if r1.f1 < r0.f1 else "improved"
 
-    def _dc(a, b): return "neg" if b < a else "pos"
+    def _delta_cls(before, after): return "neg" if after < before else "pos"
 
     # Before / after metric cells
     st.markdown(f"""
@@ -1409,7 +1391,7 @@ elif page == "Continual Learning":
                 <span class="cl-arrow">→</span>
                 <span class="cl-after">{r1.f1:.3f}</span>
             </div>
-            <div class="cl-delta {_dc(r0.f1, r1.f1)}">{r1.f1-r0.f1:+.3f} after fine-tuning</div>
+            <div class="cl-delta {_delta_cls(r0.f1, r1.f1)}">{r1.f1-r0.f1:+.3f} after fine-tuning</div>
         </div>
         <div class="cl-cell">
             <div class="cl-label">ROC-AUC · D2 Test</div>
@@ -1418,7 +1400,7 @@ elif page == "Continual Learning":
                 <span class="cl-arrow">→</span>
                 <span class="cl-after">{r1.roc_auc:.3f}</span>
             </div>
-            <div class="cl-delta {_dc(r0.roc_auc, r1.roc_auc)}">{r1.roc_auc-r0.roc_auc:+.3f} after fine-tuning</div>
+            <div class="cl-delta {_delta_cls(r0.roc_auc, r1.roc_auc)}">{r1.roc_auc-r0.roc_auc:+.3f} after fine-tuning</div>
         </div>
         <div class="cl-cell">
             <div class="cl-label">Recall · D2 Test</div>
@@ -1427,7 +1409,7 @@ elif page == "Continual Learning":
                 <span class="cl-arrow">→</span>
                 <span class="cl-after">{r1.recall:.3f}</span>
             </div>
-            <div class="cl-delta {_dc(r0.recall, r1.recall)}">{r1.recall-r0.recall:+.3f} after fine-tuning</div>
+            <div class="cl-delta {_delta_cls(r0.recall, r1.recall)}">{r1.recall-r0.recall:+.3f} after fine-tuning</div>
         </div>
         <div class="cl-cell">
             <div class="cl-label">Precision · D2 Test</div>
@@ -1436,7 +1418,7 @@ elif page == "Continual Learning":
                 <span class="cl-arrow">→</span>
                 <span class="cl-after">{r1.precision:.3f}</span>
             </div>
-            <div class="cl-delta {_dc(r0.precision, r1.precision)}">{r1.precision-r0.precision:+.3f} after fine-tuning</div>
+            <div class="cl-delta {_delta_cls(r0.precision, r1.precision)}">{r1.precision-r0.precision:+.3f} after fine-tuning</div>
         </div>
     </div>
     <div class="cl-note">before = MLP_D1 (trained D1, evaluated D2 test)  ·  after = MLP_CL (50-epoch partial_fit on D2)</div>
@@ -1444,7 +1426,6 @@ elif page == "Continual Learning":
 
     st.markdown("---")
 
-    # Logic untouched — bar chart
     metrics = ["accuracy","precision","recall","f1","roc_auc"]
     fig, ax = plt.subplots(figsize=(11, 4.5))
     x = np.arange(len(metrics)); w = 0.36
@@ -1484,9 +1465,7 @@ elif page == "Continual Learning":
         </ul>
     </div>""", unsafe_allow_html=True)
 
-# ══════════════════════════════════════════════════════════════════════════════
-# PAGE 5 — FEATURE IMPORTANCE
-# ══════════════════════════════════════════════════════════════════════════════
+# --- page: feature importance ---
 elif page == "Feature Importance":
 
     st.markdown("""
@@ -1497,7 +1476,6 @@ elif page == "Feature Importance":
     </div>
     """, unsafe_allow_html=True)
 
-    # Logic untouched
     feat_imp = pd.Series(dt_best.feature_importances_, index=feature_names).sort_values(ascending=False)
     top20 = feat_imp.head(20)
 
@@ -1516,7 +1494,6 @@ elif page == "Feature Importance":
 
     st.markdown("---")
 
-    # Logic untouched — category breakdown
     demo_f  = [f for f in feature_names if any(x in f for x in ["GENDER","RACE","ETHNICITY","INCOME","MARITAL","age","is_deceased","HEALTHCARE"])]
     enc_f   = [f for f in feature_names if any(x in f for x in ["encounter","claim_cost","payer_coverage"])]
     obs_f   = [f for f in feature_names if f.startswith("obs_")]
