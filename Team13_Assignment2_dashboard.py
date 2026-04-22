@@ -1138,8 +1138,8 @@ elif page == "Exploratory Data Analysis":
                 st.markdown(f"<div style='font-size:0.75rem;font-weight:600;color:{FG_SOFT};margin-bottom:0.5rem;font-family:var(--mono);letter-spacing:0.05em;'>{title}</div>", unsafe_allow_html=True)
                 fig, ax = plt.subplots(figsize=(5.5, 4))
                 if selected_demo in ["age","INCOME"]:
-                    ax.hist(X_tr.loc[y_tr==0, selected_demo].dropna(), bins=28, alpha=0.7, color=C_GREEN, label="No Condition", density=True, edgecolor="none")
-                    ax.hist(X_tr.loc[y_tr==1, selected_demo].dropna(), bins=28, alpha=0.7, color=C_RED,   label="Has Condition", density=True, edgecolor="none")
+                    ax.hist(X_tr.loc[(y_tr==0).values, selected_demo].dropna(), bins=28, alpha=0.7, color=C_GREEN, label="No Condition", density=True, edgecolor="none")
+                    ax.hist(X_tr.loc[(y_tr==1).values, selected_demo].dropna(), bins=28, alpha=0.7, color=C_RED,   label="Has Condition", density=True, edgecolor="none")
                     ax.set_xlabel(f"{selected_demo} (scaled)")
                     ax.set_ylabel("Density")
                     ax.legend(fontsize=8)
@@ -1205,7 +1205,7 @@ elif page == "Exploratory Data Analysis":
             with (c1 if i%2==0 else c2):
                 st.markdown(f"<div style='font-size:0.75rem;font-weight:600;color:{FG_SOFT};margin-bottom:0.4rem;'>{name}</div>", unsafe_allow_html=True)
                 fig, ax = plt.subplots(figsize=(5.5, 4))
-                ax.boxplot([X_train_d1.loc[y_train_d1==l, col].dropna() for l in [0,1]],
+                ax.boxplot([X_train_d1.loc[(y_train_d1==l).values, col].dropna() for l in [0,1]],
                            labels=["No Condition","Has Condition"], patch_artist=True, widths=0.45,
                            medianprops=dict(color=C_RED, linewidth=2),
                            boxprops=dict(facecolor=C_GREEN, alpha=0.3, linewidth=0),
