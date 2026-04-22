@@ -1,3 +1,13 @@
+"""
+Assignment 2
+Team: 13
+Members:
+- Shriniketh Deevanapalli (2023A8PS0414H)
+- Sanvi Udhan (2023A4PS0817H)
+- Sai Dheeraj Yadavalli (2023A3PS0346H)
+- Shambhavi Rani (2023AAPS0287H)
+"""
+
 DATA_DIR = "data/"
 GDRIVE_URL = "https://drive.google.com/drive/folders/1HGjj4vBzRbSFkkjmcJOu6PESguvmZcpo?usp=sharing"
 RANDOM_STATE = 42
