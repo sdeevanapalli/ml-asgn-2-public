@@ -635,7 +635,7 @@ hr {
 </style>
 """, unsafe_allow_html=True)
 
-# matplotlib theme — matches the dark UI
+# color scheme synced to the dark sidebar above
 BG       = "#171a1f"
 BG_CARD  = "#1e2128"
 FG       = "#e8eaf0"
@@ -689,24 +689,20 @@ def run_pipeline():
     if not os.path.exists(DATA_DIR):
         os.makedirs(DATA_DIR)
     
-    # Download dataset if not present
     if len([f for f in os.listdir(DATA_DIR) if f.endswith(".csv")]) < 15:
         st.info("Downloading dataset from Google Drive... This may take a few minutes.")
         import sys
         import subprocess
         import shutil
         
-        # 1. Attempt to download the URL directly as a folder
         subprocess.run([sys.executable, "-m", "gdown", "--folder", GDRIVE_URL, "-O", DATA_DIR], check=False)
-        
-        # Helper to check if any CSVs were successfully grabbed (flatteningly aware)
+
         def has_csvs():
             for _, _, f_list in os.walk(DATA_DIR):
                 if any(f.endswith(".csv") for f in f_list):
                     return True
             return False
             
-        # 2. Check if we got the files. If not, fallback to assuming it's a file / zip link
         if not has_csvs():
             zip_path = os.path.join(DATA_DIR, "dataset.zip")
             subprocess.run([sys.executable, "-m", "gdown", GDRIVE_URL, "-O", zip_path], check=False)
@@ -717,8 +713,7 @@ def run_pipeline():
                     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
                         zip_ref.extractall(DATA_DIR)
                 os.remove(zip_path)
-                    
-        # Flatten directory structure if files were extracted into a subfolder
+
         for root, dirs, files in os.walk(DATA_DIR):
             for file in files:
                 if file.endswith(".csv") and root != os.path.abspath(DATA_DIR) and root != DATA_DIR:
@@ -731,7 +726,7 @@ def run_pipeline():
 
     def get_usecols(csv_path, expected):
         try:
-            actual = pd.read_csv(csv_path, nrows=0).columns.tolist()
+            actual = list(pd.read_csv(csv_path, nrows=0).columns)
             return [c for c in actual if c in expected]
         except Exception:
             return expected
@@ -756,12 +751,10 @@ def run_pipeline():
     payer_trans  = load("payer_transitions.csv",    ["PATIENT","START_DATE","PAYER"])
     claims       = load("claims.csv",               ["PATIENTID","Id","OUTSTANDING1","CURRENT1","TOTAL_CLAIM_COST"])
     claims_trans = load("claims_transactions.csv",  ["PATIENTID","TYPE","AMOUNT"])
-    # organizations.csv and providers.csv are loaded to satisfy the requirement
-    # of using all 17 CSV files, but are excluded from feature engineering.
+    # organizations.csv and providers.csv are loaded
     # organizations.csv has only 3 rows (provider organizations) and
-    # providers.csv has only 2 rows (individual providers) — neither has
-    # a patient identifier column, so they cannot be joined to the patient
-    # feature matrix or aggregated in any meaningful way.
+    # providers.csv has only 2 rows (individual providers)
+    # neither has a patient identifier column, so they cannot be joined to the patient feature matrix or aggregated in any meaningful way.
     organizations = pd.read_csv(DATA_DIR + "organizations.csv", on_bad_lines="skip")
     providers     = pd.read_csv(DATA_DIR + "providers.csv", on_bad_lines="skip")
 
@@ -799,13 +792,13 @@ def run_pipeline():
     obs_agg = observations.dropna(subset=["VALUE"]).groupby(["PATIENT","DESCRIPTION"])["VALUE"].agg(["mean","std"]).reset_index()
     obs_agg.columns = ["PATIENT","DESC","mean","std"]
     obs_agg["DESC"] = obs_agg["DESC"].str.replace(r"[^a-zA-Z0-9]","_",regex=True).str[:40]
-    obs_mean = obs_agg.pivot_table(index="PATIENT",columns="DESC",values="mean",aggfunc="mean")
-    obs_std  = obs_agg.pivot_table(index="PATIENT",columns="DESC",values="std", aggfunc="mean")
-    obs_mean.columns = ["obs_"+c+"_mean" for c in obs_mean.columns]
-    obs_std.columns  = ["obs_"+c+"_var"  for c in obs_std.columns]
-    obs_mean = obs_mean.loc[:, obs_mean.notna().mean() >= 0.05]
-    obs_std  = obs_std.loc[:,  obs_std.notna().mean()  >= 0.05]
-    obs_features = obs_mean.join(obs_std, how="outer").reset_index()
+    obs_m = obs_agg.pivot_table(index="PATIENT",columns="DESC",values="mean",aggfunc="mean")
+    obs_s  = obs_agg.pivot_table(index="PATIENT",columns="DESC",values="std", aggfunc="mean")
+    obs_m.columns = ["obs_"+c+"_mean" for c in obs_m.columns]
+    obs_s.columns  = ["obs_"+c+"_var"  for c in obs_s.columns]
+    obs_m = obs_m.loc[:, obs_m.notna().mean() >= 0.05]
+    obs_s  = obs_s.loc[:,  obs_s.notna().mean()  >= 0.05]
+    obs_features = obs_m.join(obs_s, how="outer").reset_index()
 
     med_agg = medications.groupby("PATIENT").agg(total_medications=("START","count"),unique_medications=("DESCRIPTION","nunique"),avg_medication_cost=("BASE_COST","mean"),total_dispenses=("DISPENSES","sum")).reset_index()
     proc_agg= procedures.groupby("PATIENT").agg(total_procedures=("START","count"),unique_procedures=("DESCRIPTION","nunique"),avg_procedure_cost=("BASE_COST","mean")).reset_index()
@@ -831,6 +824,7 @@ def run_pipeline():
     conditions["START"] = pd.to_datetime(conditions["START"],dayfirst=True,errors="coerce",utc=True)
     pos_pts = set(conditions[conditions["DESCRIPTION"].str.contains(r"\(disorder\)|\(finding\)",na=False,regex=True)]["PATIENT"].unique())
     df["label"] = df["PATIENT"].apply(lambda x: 1 if x in pos_pts else 0)
+    # print("pos rate:", round(df["label"].mean(), 3))
 
     enc_dates = encounters.groupby("PATIENT")["START"].agg(["min","max"]).reset_index()
     enc_dates.columns = ["PATIENT","first_enc","last_enc"]
@@ -854,7 +848,9 @@ def run_pipeline():
         return X, y
 
     X1,y1 = preprocess(df1); X2,y2 = preprocess(df2)
+    # print(X1.head(2))
     common_cols = list(set(X1.columns) & set(X2.columns))
+    # print(common_cols[:5])
     X1,X2 = X1[common_cols], X2[common_cols]
 
     X_tr1,X_te1,y_tr1,y_te1 = train_test_split(X1,y1,test_size=TEST_SIZE,stratify=y1,random_state=RANDOM_STATE)
@@ -961,16 +957,14 @@ if page == "Project Overview":
     </div>
     """, unsafe_allow_html=True)
 
-    # Metrics row
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Total Patients",        f"{data['total_patients']:,}")
     c2.metric("Feature Dimensions",    len(feature_names))
     c3.metric("D1 — Pre-2020",         f"{data['d1_size']:,}")
     c4.metric("D2 — Post-2020",        f"{data['d2_size']:,}")
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown('<br>', unsafe_allow_html=True)
 
-    # Key insights block
     st.markdown("""
     <div class="kib">
         <div class="kib-title">Key Findings</div>
@@ -995,7 +989,6 @@ if page == "Project Overview":
     </div>
     """, unsafe_allow_html=True)
 
-    # Pipeline architecture
     st.markdown("""
     <div class="sep">
         <span class="sep-text">Pipeline Architecture</span>
@@ -1042,7 +1035,6 @@ if page == "Project Overview":
     </div>
     """, unsafe_allow_html=True)
 
-    # Team
     st.markdown("""
     <div class="sep" style="margin-top:2rem;">
         <span class="sep-text">Team</span>
@@ -1167,8 +1159,8 @@ elif page == "Exploratory Data Analysis":
             st.markdown("---")
             fig, axes = plt.subplots(1, 2, figsize=(14, 5))
             for ax, (X_t, y_t, title) in zip(axes, [(X_train_d1, y_train_d1, "D1"),(X_train_d2, y_train_d2, "D2")]):
-                plot_df = X_t[["INCOME"]].copy(); plot_df["label"] = y_t.values
-                ax.boxplot([plot_df[plot_df["label"]==l]["INCOME"].dropna() for l in [0,1]],
+                pdf = X_t[["INCOME"]].copy(); pdf["label"] = y_t.values
+                ax.boxplot([pdf[pdf["label"]==l]["INCOME"].dropna() for l in [0,1]],
                            labels=["No condition","Has condition"], patch_artist=True, widths=0.45,
                            medianprops=dict(color=C_RED, linewidth=2),
                            boxprops=dict(facecolor=C_GREEN, alpha=0.3, linewidth=0),
@@ -1188,9 +1180,9 @@ elif page == "Exploratory Data Analysis":
             fig, axes = plt.subplots(1, 2, figsize=(14, 5))
             for ax, (X_t, y_t, title) in zip(axes, [(X_train_d1, y_train_d1, "D1 — Historical"),(X_train_d2, y_train_d2, "D2 — Current")]):
                 if selected_clin in X_t.columns:
-                    plot_df = X_t[[selected_clin]].copy(); plot_df["label"] = y_t.values
+                    pdf = X_t[[selected_clin]].copy(); pdf["label"] = y_t.values
                     for label, color in [(0, C_GREEN),(1, C_RED)]:
-                        parts = ax.violinplot(plot_df[plot_df["label"]==label][selected_clin].dropna(),
+                        parts = ax.violinplot(pdf[pdf["label"]==label][selected_clin].dropna(),
                                               positions=[label], showmedians=True, showextrema=True)
                         for pc in parts.get('bodies',[]): pc.set_facecolor(color); pc.set_alpha(0.5); pc.set_edgecolor("none")
                         parts['cmedians'].set_color(C_AMBER); parts['cmedians'].set_linewidth(2)
@@ -1484,18 +1476,18 @@ elif page == "Feature Importance":
     </div>
     """, unsafe_allow_html=True)
 
-    feat_imp = pd.Series(dt_best.feature_importances_, index=feature_names).sort_values(ascending=False)
-    top20 = feat_imp.head(20)
+    fi = pd.Series(dt_best.feature_importances_, index=feature_names).sort_values(ascending=False)
+    top_feats = fi.head(20)
 
     st.markdown('<span class="sec-label">Top 20 — Decision Tree</span>', unsafe_allow_html=True)
     fig, ax = plt.subplots(figsize=(11, 7))
-    alphas = [0.45 + 0.55*(1-i/20) for i in range(len(top20))]
+    alphas = [0.45 + 0.55*(1-i/20) for i in range(len(top_feats))]
     colors_bar = [matplotlib.colors.to_rgba(C_GREEN, a) for a in alphas]
-    bars = ax.barh(top20.index[::-1], top20.values[::-1], color=colors_bar[::-1], edgecolor="none", height=0.65)
+    bars = ax.barh(top_feats.index[::-1], top_feats.values[::-1], color=colors_bar[::-1], edgecolor="none", height=0.65)
     ax.set_xlabel("Feature Importance")
     ax.set_title("Top 20 Feature Importances — Decision Tree", pad=14)
     ax.bar_label(bars, fmt="%.4f", fontsize=8, color=FG_SOFT, padding=4)
-    ax.set_xlim(0, top20.max() * 1.2)
+    ax.set_xlim(0, top_feats.max() * 1.2)
     plt.tight_layout()
     st.pyplot(fig, use_container_width=True)
     plt.close(fig)
