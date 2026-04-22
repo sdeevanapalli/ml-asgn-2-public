@@ -8,6 +8,7 @@ Members:
 - Shambhavi Rani (2023AAPS0287H)
 """
 
+# SETUP
 DATA_DIR = "data/"
 GDRIVE_URL = "https://drive.google.com/drive/folders/1HGjj4vBzRbSFkkjmcJOu6PESguvmZcpo?usp=sharing"
 RANDOM_STATE = 42
@@ -52,7 +53,7 @@ NAV_ITEMS = [
     ("Feature Importance",        "05"),
 ]
 
-# global CSS — dark charcoal / muted amber, Inter type, no decorative elements
+
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
@@ -266,9 +267,6 @@ hr {
     font-family: var(--mono) !important;
 }
 
-/* ════════════════════════════════════
-   CUSTOM COMPONENTS
-════════════════════════════════════ */
 
 /* Sidebar brand block */
 .sb-brand {
@@ -645,7 +643,7 @@ hr {
 </style>
 """, unsafe_allow_html=True)
 
-# color scheme synced to the dark sidebar above
+
 BG       = "#171a1f"
 BG_CARD  = "#1e2128"
 FG       = "#e8eaf0"
@@ -771,7 +769,7 @@ def run_pipeline():
 
     ref_date = pd.Timestamp(TEMPORAL_CUTOFF, tz="UTC")
     
-    # Pandas C-engine IndexError if numeric columns stay as str after dtype=str load
+
     for col in ["BASE_ENCOUNTER_COST", "TOTAL_CLAIM_COST", "PAYER_COVERAGE"]:
         if col in encounters.columns: encounters[col] = pd.to_numeric(encounters[col], errors="coerce")
     for col in ["BASE_COST", "DISPENSES"]:
